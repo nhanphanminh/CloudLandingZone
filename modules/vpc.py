@@ -248,6 +248,3 @@ class awsVPC(TerraformStack):
         "CreatedBy":OWNER
       }
     )
-    # TerraformOutput(self, 'hello_public_ip',
-    #   value=ec2Instance.public_ip
-    # )

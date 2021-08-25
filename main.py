@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from cdktf import App
-from modules.vpc import awsVPC
+from modules import awsVPC
 
 app = App()
 

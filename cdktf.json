@@ -5,7 +5,9 @@
   "terraformModules": [],
   "codeMakerOutput": "imports",
   "context": {
-    "excludeStackIdFromLogicalIds": "true",
-"allowSepCharsInLogicalIds": "true"
+  "excludeStackIdFromLogicalIds": "true",
+  "allowSepCharsInLogicalIds": "true"
   }
 }
+
+
