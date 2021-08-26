@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 from constructs import Construct
 from cdktf import TerraformStack, TerraformOutput
-from imports.aws import VpcPeeringConnection,SecurityGroup, NetworkAcl, NatGateway, Eip, AwsProvider, ShieldProtection, Vpc, InternetGateway, Subnet,DbSubnetGroup,RouteTable,RouteTableAssociation
+from imports.aws import NetworkAclEgress,NetworkAclIngress,NetworkAcl
+from imports.aws import SecurityGroupIngress,SecurityGroupEgress,SecurityGroup
+from imports.aws import VpcPeeringConnection,Vpc, InternetGateway
+from imports.aws import NatGateway, Eip, AwsProvider, ShieldProtection
+from imports.aws import Subnet,DbSubnetGroup,RouteTable,RouteTableAssociation
 #Project information 
 PROJECT="LandingZone"
 ENV="dev"
@@ -17,6 +21,8 @@ ALC_INGRESS_FROM_PORT=0
 ALC_INGRESS_TO_PORT=0
 ALC_INGRESS_RULE_NO=200
 ALC_INGRESS_PROTOCOL="tcp"
+#Security Group Ingress Control
+
 #VPC Peer
 PEER_VPC_ID=""
 PEER_REGION=""
@@ -188,54 +194,54 @@ class awsVPC(TerraformStack):
       subnet_id      = PRIVATE_SUBNET_02.id,
       route_table_id = ROUTE_PRIVATE_SUBNET_02.id
     )
+    NET_ACLS_ALLOW_OUTBOUND = NetworkAclEgress (
+          protocol = "-1",
+          rule_no = ALC_INGRESS_RULE_NO,
+          action = "allow",
+          cidr_block = '0.0.0.0/0',
+          from_port = 0,
+          to_port = 0
+    )
+    NET_ACLS_ALLOW_INBOUND = NetworkAclIngress (
+          protocol = ALC_INGRESS_PROTOCOL,
+          rule_no = ALC_INGRESS_RULE_NO,
+          action = "allow",
+          cidr_block = ALC_INGRESS_CIDR_BLOCK,
+          from_port = ALC_INGRESS_FROM_PORT,
+          to_port = ALC_INGRESS_TO_PORT
+    )
     NET_ACLS_DATABASE = NetworkAcl(self, 'NetworkAclDatabase',
       vpc_id = VPC.id,
       subnet_ids = [PRIVATE_SUBNET_03.id, PRIVATE_SUBNET_04.id],
-      egress = [
-        {
-          "protocol":"-1",
-          "rule_no":ALC_INGRESS_RULE_NO,
-          "action":"allow",
-          "cidr_block":"0.0.0.0/0",
-          "from_port":0,
-          "to_port":0
-        }
-      ],
-      ingress = [
-        {
-          "action":"allow",
-          "cidr_block":ALC_INGRESS_CIDR_BLOCK,
-          "protocol":ALC_INGRESS_PROTOCOL,
-          "rule_no":ALC_INGRESS_RULE_NO,
-          "from_port":ALC_INGRESS_FROM_PORT,
-          "to_port":ALC_INGRESS_TO_PORT,
-        }
-      ]
+      egress = [NET_ACLS_ALLOW_OUTBOUND],
+      ingress = [NET_ACLS_ALLOW_INBOUND]
+    )
+    SG_ALLOW_HTTPS = SecurityGroupIngress(
+        cidr_blocks=['0.0.0.0/0'],
+        ipv6_cidr_blocks=[],
+        protocol='tcp',
+        from_port=443,
+        to_port=443,
+        description="Allow HTTPS",
+        prefix_list_ids=[],
+        security_groups=[]
+    )
+    SG_ALLOW_OUTBOUND = SecurityGroupEgress(
+        cidr_blocks=['0.0.0.0/0'],
+        ipv6_cidr_blocks=[],
+        protocol='-1',
+        from_port=0,
+        to_port=0,
+        description="Allow outbound",
+        prefix_list_ids=[],
+        security_groups=[]
     )
     SECURITY_GROUP_WEB_SERVICE = SecurityGroup(self,'SecurityGroupWebService',
       name        = "SecurityGroupWebService",
       description = "Allow access web services",
-      vpc_id      = VPC.id,
-      ingress = [{
-        "description":"Allow 443 from anywhere",
-        "from_port":443,
-        "to_port":443,
-        "protocol":"tcp",
-        "cidr_blocks":"[0.0.0.0/0]"
-      },
-      {
-        "description":"Allow 80 from anywhere for redirection",
-        "from_port":80,
-        "to_port":80,
-        "protocol":"tcp",
-        "cidr_blocks":["0.0.0.0/0"],
-      }],
-      egress = [{
-        "from_port":0,
-        "to_port":0,
-        "protocol":"-1",
-        "cidr_blocks":"[0.0.0.0/0]",
-      }]
+      vpc_id      = VPC.id,      
+      ingress=[SG_ALLOW_HTTPS],
+      egress = [SG_ALLOW_OUTBOUND]
     )
     VPC_PEERING_CONNECTION = VpcPeeringConnection(self,'VpcPeeringConnection',
       peer_owner_id = PEER_OWNER_ID,
