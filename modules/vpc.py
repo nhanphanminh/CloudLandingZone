@@ -214,7 +214,11 @@ class awsVPC(TerraformStack):
       vpc_id = VPC.id,
       subnet_ids = [PRIVATE_SUBNET_03.id, PRIVATE_SUBNET_04.id],
       egress = [NET_ACLS_ALLOW_OUTBOUND],
-      ingress = [NET_ACLS_ALLOW_INBOUND]
+      ingress = [NET_ACLS_ALLOW_INBOUND],
+      tags    = {
+        "Name":"%s-%s-NetworkAclDatabase" % (PROJECT, ENV),
+        "CreatedBy":OWNER
+      }
     )
     SG_ALLOW_HTTPS = SecurityGroupIngress(
         cidr_blocks=['0.0.0.0/0'],
@@ -241,7 +245,11 @@ class awsVPC(TerraformStack):
       description = "Allow access web services",
       vpc_id      = VPC.id,      
       ingress=[SG_ALLOW_HTTPS],
-      egress = [SG_ALLOW_OUTBOUND]
+      egress = [SG_ALLOW_OUTBOUND],
+      tags    = {
+        "Name":"%s-%s-SecurityGroupWebService" % (PROJECT, ENV),
+        "CreatedBy":OWNER
+      }
     )
     VPC_PEERING_CONNECTION = VpcPeeringConnection(self,'VpcPeeringConnection',
       peer_owner_id = PEER_OWNER_ID,
